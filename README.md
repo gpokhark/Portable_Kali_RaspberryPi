@@ -82,6 +82,17 @@
     unset DBUS_SESSION_BUS_ADDRESS
     startxfce4 &
     ```
+    The following part helps with the grey screen - [Link](https://forums.raspberrypi.com/viewtopic.php?t=216725)
+    ```bash
+    #!/bin/sh unset SESSION_MANAGER 
+    unset DBUS_SESSION_BUS_ADDRESS 
+    startxfce4 & 
+    [ -x /etc/vnc/xstartup ] && exec /etc/vnc/xstartup 
+    [ -r $HOME/.Xresources ] && xrdb $HOME/.Xresources 
+    xsetroot -solid grey 
+    vncconfig -iconic &
+    ```
+
     Save and exit, then change the file's permissions:
     ```bash
     chmod +x ~/.vnc/xstartup
