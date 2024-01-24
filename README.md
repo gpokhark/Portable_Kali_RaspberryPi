@@ -119,12 +119,76 @@
 ### 8. Connect via VNC
 - Use a VNC viewer client on another machine to connect to the Raspberry Pi's VNC server using the password you set up earlier with `vncpasswd`.
 
+### 9. VNCServer `systemctl`` service 
+- Create `vncserver.service` file for the `systemctl` to start at the startup.
+    ```bash
+    cd /etc/systemd/system
+    sudo touch vncserver.service
+    sudo nano vncserver.service
+    ```
+- Add following lines to the file
+    ```bash
+    [Unit]
+    Description=VNC remote desktop server
+    After=sshd.service
+
+    [Service]
+    Type=dbus
+    ExecStart=/usr/bin/vncserver
+    User=kali
+    Type=forking
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+- Enable the VNCserver service to start at the startup
+    ```bash
+    sudo systemctl daemon-reload
+    sudo systemctl start vncserver
+    sudo systemctl enable vncserver 
+    ```
+
 ## Creating a Wi-Fi Access Point
 
 ### 1. Requirements
 - To set up a Wi-Fi access point, you'll need a USB Wi-Fi adapter.
 
-### 2. Update and Install
+### 2. Install the USB Wi-Fi adapter driver
+- `lsusb` - to identify the driver and the chipset type.
+    ```bash
+    Bus 001 Device 003: ID 2357:012d TP-Link Archer T3U [Realtek RTL8812BU]
+    ```
+- Following instructions are specifically for the TP-Link AC1300 ([Archer AC1300 Mini Wireless MU-MIMO USB Adapter](https://www.tp-link.com/us/home-networking/usb-adapter/archer-t3u/))  USB Wi-Fi adapter
+    ```bash
+    sudo apt update
+    which dkms || sudo apt install dkms
+    git clone https://github.com/morrownr/88x2bu-20210702.git
+    cd 88x2bu-20210702
+    sudo ./install-driver.sh
+    ```
+-  Check driver existance
+    ```bash
+    find /lib/modules/`uname -r`/ -name "88x2bu.ko"
+    ```
+- Follow the instructions for kali linux on following links -
+    - [https://docs.alfa.com.tw/Support/Linux/RTL8812BU/](https://docs.alfa.com.tw/Support/Linux/RTL8812BU/)
+    - [https://github.com/morrownr/88x2bu-20210702](https://github.com/morrownr/88x2bu-20210702)
+    - [https://www.manuel-bauer.net/blog/install-driver-for-rtl8812bu-wifi-dongle-on-a-raspberry-pi](https://www.manuel-bauer.net/blog/install-driver-for-rtl8812bu-wifi-dongle-on-a-raspberry-pi)
+
+- Warning: If you decide to do a distro upgrade, which will likely install a new version of kernel such as 5.15 to 6.1, you need to update this driver with the newest available code and then run the removal script before performing the disto upgrade. Use the following commands in the driver directory:Before the kernel update, you need to update this driver.
+    ```bash
+    git pull
+    ```
+     Note: Do not reboot before running the below command so that the driver stays active until after your distro upgrade is complete.
+    ```bash
+    sudo sh remove-driver.sh
+    ```
+    Note: The following command will reinstall the updated driver after you are finished with the distro upgrade and reboot.
+    ```bash
+    sudo ./install-driver.sh
+    ```
+
+### 3. Update and Install
 - Run the following commands on your Raspberry Pi to update and install the necessary software:
     ```bash
     sudo apt update -y
@@ -132,7 +196,7 @@
     sudo apt install hostapd dnsmasq
     ```
 
-### 3. Configure `hostapd`
+### 4. Configure `hostapd`
 - Modify the "hostapd.conf" file as follows:
     ```bash
     sudo nano /etc/hostapd/hostapd.conf
@@ -162,7 +226,7 @@
     sudo hostapd /etc/hostapd/hostapd.conf
     ```
 
-### 4. Configure DHCP
+### 5. Configure DHCP
 - Modify the "dnsmasq.conf" file:
     ```bash
     sudo nano /etc/dnsmasq.conf
@@ -179,7 +243,7 @@
     listen-address=127.0.0.1
     ```
 
-### 5. Enable IP Forwarding
+### 6. Enable IP Forwarding
 - Modify the "sysctl.conf" file:
     ```bash
     sudo nano /etc/sysctl.conf
@@ -189,7 +253,7 @@
     net.ipv4.ip_forward=1
     ```
 
-### 6. Modify Network Interfaces
+### 7. Modify Network Interfaces
 - Modify the "interfaces" file:
     ```bash
     sudo nano /etc/network/interfaces
@@ -202,7 +266,7 @@
         netmask 255.255.255.0
     ```
 
-### 7. Configure IPTABLES
+### 8. Configure IPTABLES
 - Enable IP masquerading for routing:
     ```bash
     sudo iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE
@@ -216,7 +280,7 @@
     sudo sh -c "iptables-save > /etc/iptables.ipv4.nat"
     ```
 
-### 8. Make IPTABLES Changes Persistent
+### 9. Make IPTABLES Changes Persistent
 - To ensure that the IPTABLES changes persist after a reboot, create a script:
     ```bash
     sudo nano /etc/network/if-pre-up.d/iptables
@@ -230,7 +294,7 @@
     sudo chmod +x /etc/network/if-pre-up.d/iptables
     ```
 
-### 9. Start Services
+### 10. Start Services
 - Stop all running services, restart them, and enable them:
     ```bash
     sudo service hostapd stop
@@ -243,13 +307,13 @@
     sudo systemctl enable hostapd
     ```
 
-### 10. Reboot
+### 11. Reboot
 - Reboot your Raspberry Pi:
     ```bash
     sudo reboot
     ```
 
-### 11. Connect to Your Wi-Fi Access Point
+### 12. Connect to Your Wi-Fi Access Point
 - After the reboot, you should see your newly created Wi-Fi access point, named "YOURSSID." Connect to it using the password you set, "YOUR_PASSWORD."
 
 ## Portable Kali Device
